@@ -5,6 +5,34 @@ This Java package provides a fast lookup of country, region, city, latitude, lon
 
 **At this moment it supports only IPv4 address.**
 
+Example
+=======
+
+```java
+import IP2Location.IP2Location;
+import IP2Location.IP2LocationResult;
+
+public class Application {
+    public static void main(String[] args) {
+        try {
+            IP2Location ip2Location = new IP2Location("IP-COUNTRY-REGION-CITY-LATITUDE-LONGITUDE-ZIPCODE-TIMEZONE-ISP-DOMAIN-NETSPEED-AREACODE-WEATHER-MOBILE-ELEVATION-USAGETYPE-SAMPLE.BIN");
+            IP2LocationResult result = ip2Location.query("8.8.8.8");
+
+            System.out.println(result.country_code);
+            System.out.println(result.country_name);
+            System.out.println(result.city);
+            System.out.println(result.isp);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+```
+
+Database
+========
+
 Free LITE databases are available at https://lite.ip2location.com upon registration.
 
 The paid databases are available at https://ip2location.com under subscription package.
