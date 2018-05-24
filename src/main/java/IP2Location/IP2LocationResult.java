@@ -15,8 +15,8 @@ public class IP2LocationResult {
     public String netspeed;
     public String iddcode;
     public String areacode;
-    public String weatherstationcode;
-    public String weatherstationname;
+    public String weatherstation_code;
+    public String weatherstation_name;
     public String mcc;
     public String mnc;
     public String mobilebrand;

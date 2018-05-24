@@ -6,7 +6,7 @@
 
     <groupId>com.github.stdfox</groupId>
     <artifactId>ip2location</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 
     <name>IP2Location</name>
     <description>IP2Location library for Java. Use IP2Location database to lookup the country, region, city,

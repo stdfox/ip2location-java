@@ -214,12 +214,12 @@ public class IP2Location {
 
                 if (WEATHERSTATIONCODE_POSITION[metadata.databasetype] != 0) {
                     offset = read32(rowOffset + 4 * (WEATHERSTATIONCODE_POSITION[metadata.databasetype] - 1));
-                    result.weatherstationcode = readString(offset);
+                    result.weatherstation_code = readString(offset);
                 }
 
                 if (WEATHERSTATIONNAME_POSITION[metadata.databasetype] != 0) {
                     offset = read32(rowOffset + 4 * (WEATHERSTATIONNAME_POSITION[metadata.databasetype] - 1));
-                    result.weatherstationname = readString(offset);
+                    result.weatherstation_name = readString(offset);
                 }
 
                 if (MCC_POSITION[metadata.databasetype] != 0) {
