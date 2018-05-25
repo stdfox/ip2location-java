@@ -9,8 +9,8 @@ Example
 =======
 
 ```java
-import IP2Location.IP2Location;
-import IP2Location.IP2LocationResult;
+import com.github.stdfox.ip2location.IP2Location;
+import com.github.stdfox.ip2location.IP2LocationResult;
 
 public class Application {
     public static void main(String[] args) {

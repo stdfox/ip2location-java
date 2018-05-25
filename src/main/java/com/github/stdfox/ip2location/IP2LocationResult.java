@@ -1,4 +1,4 @@
-package IP2Location;
+package com.github.stdfox.ip2location;
 
 public class IP2LocationResult {
     public String ip;

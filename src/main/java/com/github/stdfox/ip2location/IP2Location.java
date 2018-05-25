@@ -1,4 +1,4 @@
-package IP2Location;
+package com.github.stdfox.ip2location;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
