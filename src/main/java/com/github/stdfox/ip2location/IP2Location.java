@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 
 public class IP2Location {
+
     private class Metadata {
         int databasetype;
         int databasecolumn;
@@ -65,8 +66,18 @@ public class IP2Location {
         metadata.ipv6columnsize = 16 + ((metadata.databasecolumn - 1) << 2);
     }
 
-    private static long ip2long(String ip) throws UnknownHostException {
-        return ByteBuffer.allocate(Integer.BYTES).put(InetAddress.getByName(ip).getAddress()).getInt(0);
+    private long readip(long offset, boolean ip4) throws IOException {
+        if (ip4) {
+            return read32(offset);
+        }
+        else {
+            long a = read32(offset);
+            long b = read32(offset + 4);
+            long c = read32(offset + 8);
+            long d = read32(offset + 12);
+
+            return (d << 96) | (c << 64) | (b << 32) | a;
+        }
     }
 
     private int read8(long position) throws IOException {
@@ -116,6 +127,126 @@ public class IP2Location {
         return String.copyValueOf(data);
     }
 
+    private void readRecord(long mid, boolean ip4, IP2LocationResult result) throws IOException {
+        long off;
+        long baseaddr;
+
+        if (ip4) {
+            off = 0;
+            baseaddr = metadata.ipv4databaseaddr;
+        }
+        else {
+            off = 12;
+            baseaddr = metadata.ipv6databaseaddr;
+        }
+
+        long rowOffset = baseaddr + mid * (metadata.databasecolumn * 4 + off) + off;
+
+        long offset;
+
+        if (COUNTRY_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (COUNTRY_POSITION[metadata.databasetype] - 1));
+            result.country_code = readString(offset);
+
+            offset += 3;
+            result.country_name = readString(offset);
+        }
+
+        if (REGION_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (REGION_POSITION[metadata.databasetype] - 1));
+            result.region = readString(offset);
+        }
+
+        if (CITY_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (CITY_POSITION[metadata.databasetype] - 1));
+            result.city = readString(offset);
+        }
+
+        if (ISP_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (ISP_POSITION[metadata.databasetype] - 1));
+            result.isp = readString(offset);
+        }
+
+        if (LATITUDE_POSITION[metadata.databasetype] != 0) {
+            offset = rowOffset + 4 * (LATITUDE_POSITION[metadata.databasetype] - 1);
+            result.latitude = readFloat(offset);
+        }
+
+        if (LONGITUDE_POSITION[metadata.databasetype] != 0) {
+            offset = rowOffset + 4 * (LONGITUDE_POSITION[metadata.databasetype] - 1);
+            result.longitude = readFloat(offset);
+        }
+
+        if (DOMAIN_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (DOMAIN_POSITION[metadata.databasetype] - 1));
+            result.domain = readString(offset);
+        }
+
+        if (ZIPCODE_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (ZIPCODE_POSITION[metadata.databasetype] - 1));
+            result.zipcode = readString(offset);
+        }
+
+        if (TIMEZONE_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (TIMEZONE_POSITION[metadata.databasetype] - 1));
+            result.timezone = readString(offset);
+        }
+
+        if (NETSPEED_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (NETSPEED_POSITION[metadata.databasetype] - 1));
+            result.netspeed = readString(offset);
+        }
+
+        if (IDDCODE_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (IDDCODE_POSITION[metadata.databasetype] - 1));
+            result.iddcode = readString(offset);
+        }
+
+        if (AREACODE_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (AREACODE_POSITION[metadata.databasetype] - 1));
+            result.areacode = readString(offset);
+        }
+
+        if (WEATHERSTATIONCODE_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (WEATHERSTATIONCODE_POSITION[metadata.databasetype] - 1));
+            result.weatherstation_code = readString(offset);
+        }
+
+        if (WEATHERSTATIONNAME_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (WEATHERSTATIONNAME_POSITION[metadata.databasetype] - 1));
+            result.weatherstation_name = readString(offset);
+        }
+
+        if (MCC_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (MCC_POSITION[metadata.databasetype] - 1));
+            result.mcc = readString(offset);
+        }
+
+        if (MNC_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (MNC_POSITION[metadata.databasetype] - 1));
+            result.mnc = readString(offset);
+        }
+
+        if (MOBILEBRAND_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (MOBILEBRAND_POSITION[metadata.databasetype] - 1));
+            result.mobilebrand = readString(offset);
+        }
+
+        if (ELEVATION_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (ELEVATION_POSITION[metadata.databasetype] - 1));
+            String data = readString(offset);
+
+            if (data != null) {
+                result.elevation = Float.parseFloat(data);
+            }
+        }
+
+        if (USAGETYPE_POSITION[metadata.databasetype] != 0) {
+            offset = read32(rowOffset + 4 * (USAGETYPE_POSITION[metadata.databasetype] - 1));
+            result.usagetype = readString(offset);
+        }
+    }
+
     public IP2LocationResult query(String ip) throws IOException {
         IP2LocationResult result = new IP2LocationResult(ip);
 
@@ -123,133 +254,62 @@ public class IP2Location {
             return result;
         }
 
+        boolean ip4;
+        long off;
+        long indexpos;
+        long baseaddr;
         long low = 0;
-        long high = metadata.ipv4databasecount;
+        long high;
         long mid;
         long ipfrom;
         long ipto;
         long ipno;
+        long[] ipLongs;
 
         try {
-            ipno = ip2long(ip);
+            ipLongs = IP2Long.IPToLong(ip);
+            ip4 = ipLongs.length == 1;
         } catch (UnknownHostException e) {
             return result;
         }
 
-        if (ipno == 4294967295L) {
-            ipno -= 1;
+        if (ip4) {
+            ipno = ipLongs[0];
+            if (ipno == 4294967295L) {
+                ipno -= 1;
+            }
+
+            off = 0;
+            baseaddr = metadata.ipv4databaseaddr;
+            high = metadata.ipv4databasecount;
+            if (metadata.ipv4indexbaseaddr > 0) {
+                indexpos = ((ipno >> 16) << 3) + metadata.ipv4indexbaseaddr;
+                low = read32(indexpos);
+                high = read32(indexpos + 4);
+            }
+        }
+        else {
+            if (metadata.ipv6databasecount == 0) {
+                throw new IOException("Please use IPv6 BIN file for IPv6 Addres");
+            }
+            ipno = (ipLongs[0] << 64) | ipLongs[1];
+            off = 12;
+            baseaddr = metadata.ipv6databaseaddr;
+            high = metadata.ipv6databasecount;
+            if (metadata.ipv6indexbaseaddr > 0) {
+                indexpos = ((ipno >> 112) << 3) + metadata.ipv6indexbaseaddr;
+                low = read32(indexpos);
+                high = read32(indexpos + 4);
+            }
         }
 
         while (low <= high) {
             mid = (low + high) / 2;
-            long rowOffset = metadata.ipv4databaseaddr + mid * metadata.databasecolumn * 4;
-            ipfrom = read32(rowOffset);
-            ipto = read32(rowOffset + metadata.databasecolumn * 4);
+            ipfrom = readip(baseaddr + mid * (metadata.databasecolumn * 4 + off), ip4);
+            ipto = readip(baseaddr + (mid + 1) * (metadata.databasecolumn * 4 + off), ip4);
 
             if (ipno >= ipfrom && ipno < ipto) {
-                long offset;
-
-                if (COUNTRY_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (COUNTRY_POSITION[metadata.databasetype] - 1));
-                    result.country_code = readString(offset);
-
-                    offset += 3;
-                    result.country_name = readString(offset);
-                }
-
-                if (REGION_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (REGION_POSITION[metadata.databasetype] - 1));
-                    result.region = readString(offset);
-                }
-
-                if (CITY_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (CITY_POSITION[metadata.databasetype] - 1));
-                    result.city = readString(offset);
-                }
-
-                if (ISP_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (ISP_POSITION[metadata.databasetype] - 1));
-                    result.isp = readString(offset);
-                }
-
-                if (LATITUDE_POSITION[metadata.databasetype] != 0) {
-                    offset = rowOffset + 4 * (LATITUDE_POSITION[metadata.databasetype] - 1);
-                    result.latitude = readFloat(offset);
-                }
-
-                if (LONGITUDE_POSITION[metadata.databasetype] != 0) {
-                    offset = rowOffset + 4 * (LONGITUDE_POSITION[metadata.databasetype] - 1);
-                    result.longitude = readFloat(offset);
-                }
-
-                if (DOMAIN_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (DOMAIN_POSITION[metadata.databasetype] - 1));
-                    result.domain = readString(offset);
-                }
-
-                if (ZIPCODE_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (ZIPCODE_POSITION[metadata.databasetype] - 1));
-                    result.zipcode = readString(offset);
-                }
-
-                if (TIMEZONE_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (TIMEZONE_POSITION[metadata.databasetype] - 1));
-                    result.timezone = readString(offset);
-                }
-
-                if (NETSPEED_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (NETSPEED_POSITION[metadata.databasetype] - 1));
-                    result.netspeed = readString(offset);
-                }
-
-                if (IDDCODE_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (IDDCODE_POSITION[metadata.databasetype] - 1));
-                    result.iddcode = readString(offset);
-                }
-
-                if (AREACODE_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (AREACODE_POSITION[metadata.databasetype] - 1));
-                    result.areacode = readString(offset);
-                }
-
-                if (WEATHERSTATIONCODE_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (WEATHERSTATIONCODE_POSITION[metadata.databasetype] - 1));
-                    result.weatherstation_code = readString(offset);
-                }
-
-                if (WEATHERSTATIONNAME_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (WEATHERSTATIONNAME_POSITION[metadata.databasetype] - 1));
-                    result.weatherstation_name = readString(offset);
-                }
-
-                if (MCC_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (MCC_POSITION[metadata.databasetype] - 1));
-                    result.mcc = readString(offset);
-                }
-
-                if (MNC_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (MNC_POSITION[metadata.databasetype] - 1));
-                    result.mnc = readString(offset);
-                }
-
-                if (MOBILEBRAND_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (MOBILEBRAND_POSITION[metadata.databasetype] - 1));
-                    result.mobilebrand = readString(offset);
-                }
-
-                if (ELEVATION_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (ELEVATION_POSITION[metadata.databasetype] - 1));
-                    String data = readString(offset);
-
-                    if (data != null) {
-                        result.elevation = Float.parseFloat(data);
-                    }
-                }
-
-                if (USAGETYPE_POSITION[metadata.databasetype] != 0) {
-                    offset = read32(rowOffset + 4 * (USAGETYPE_POSITION[metadata.databasetype] - 1));
-                    result.usagetype = readString(offset);
-                }
+                readRecord(mid, ip4, result);
 
                 break;
             }
